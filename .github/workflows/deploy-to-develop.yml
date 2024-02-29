@@ -1,0 +1,45 @@
+# This is a basic workflow to help you get started with Actions
+name: Trigger tests
+
+on:
+  push:
+    branches: ["develop"]  # Every time code merges to main branch, build application.
+  workflow_dispatch:
+
+jobs:
+  # This workflow would deploy the application after new code is merged into the develop branch. 
+  deploy-develop-env:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+
+      # Dummy steps just to demonstrate the concept
+      - name: setup infra
+        run: echo "infrastructure setup" 
+      
+      - name: build application
+        run: echo "app build"
+      
+      - name: deploy application
+        run: echo "app deployed" 
+  
+  notify:
+    runs-on: ubuntu-latest
+    name: Notify test repositories that deployment is completed on develop env and thus they can run tests specific to this service.
+    needs: deploy-develop-env
+    strategy:
+      matrix:
+       # repos: [ 'PramodKumarYadav/zero',  'PramodKumarYadav/api-tests',  'PramodKumarYadav/mobile-tests', 'PramodKumarYadav/browser-tests']
+        repos: [ 'shital07/zero' ]
+    steps:
+      - name: Dispatch event to repository
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.REPO_ACCESS_TOKEN_TO_TRIGGER_EVENTS }}
+          repository: ${{ matrix.repos }}
+          event-type: deployment-completed-notification-event
+          client-payload: '{ "github": ${{ toJson(github) }},"TEST_ENV": "DEVELOP" , "TAG": "${{ github.event.repository.name }}"}'
